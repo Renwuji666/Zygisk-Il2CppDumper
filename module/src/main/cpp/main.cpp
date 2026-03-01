@@ -19,7 +19,7 @@ using zygisk::ServerSpecializeArgs;
 
 namespace {
 
-constexpr const char *kConfigPath = "/data/local/tmp/.il2cppdump/config.txt";
+constexpr const char *kConfigName = "config.txt";
 
 std::string Trim(std::string value) {
     size_t start = 0;
@@ -51,10 +51,17 @@ bool ParseBool(const std::string &value, bool default_value) {
     return default_value;
 }
 
-bool LoadConfig(std::string &package_name, bool &dump_enabled) {
-    FILE *fp = fopen(kConfigPath, "r");
+bool LoadConfig(int module_dir_fd, std::string &package_name, bool &dump_enabled) {
+    int fd = openat(module_dir_fd, kConfigName, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        LOGW("failed to open module config: %s", kConfigName);
+        return false;
+    }
+
+    FILE *fp = fdopen(fd, "r");
     if (fp == nullptr) {
-        LOGW("failed to open config: %s", kConfigPath);
+        close(fd);
+        LOGW("failed to parse module config: %s", kConfigName);
         return false;
     }
 
@@ -88,11 +95,11 @@ bool LoadConfig(std::string &package_name, bool &dump_enabled) {
     fclose(fp);
 
     if (!has_package_name) {
-        LOGW("missing package name in config: %s", kConfigPath);
+        LOGW("missing package name in config: %s", kConfigName);
         return false;
     }
     if (!has_dump_enabled) {
-        LOGW("missing dump switch in config: %s", kConfigPath);
+        LOGW("missing dump switch in config: %s", kConfigName);
         return false;
     }
     return true;
@@ -137,7 +144,8 @@ private:
     void preSpecialize(const char *package_name, const char *app_data_dir) {
         std::string target_package_name;
         bool dump_enabled = false;
-        if (!LoadConfig(target_package_name, dump_enabled)) {
+        int module_dir_fd = api->getModuleDir();
+        if (!LoadConfig(module_dir_fd, target_package_name, dump_enabled)) {
             api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
             return;
         }

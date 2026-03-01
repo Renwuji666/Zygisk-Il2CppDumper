@@ -5,11 +5,9 @@ PROPFILE=false
 POSTFSDATA=false
 LATESTARTSERVICE=false
 
-CONFIG_DIR="/data/local/tmp/.il2cppdump"
-CONFIG_FILE="$CONFIG_DIR/config.txt"
+CONFIG_FILE="$MODPATH/config.txt"
 
-ui_print "- Preparing il2cppdump config"
-mkdir -p "$CONFIG_DIR"
+ui_print "- Preparing il2cppdump config in module dir"
 
 if [ ! -f "$CONFIG_FILE" ]; then
   cat > "$CONFIG_FILE" <<'EOF'
