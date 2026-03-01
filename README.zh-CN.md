@@ -15,9 +15,10 @@ Zygisk版Il2CppDumper，在游戏运行时dump il2cpp数据，可以绕过保护
       1. 下载源码
       2. 使用Android Studio运行gradle任务`:module:assembleRelease`编译，zip包会生成在`out`文件夹下
 3. 在Magisk里安装模块
-4. 创建`/data/local/tmp/.il2cppdump/config.txt`，内容例如：
+4. 安装模块时会自动创建`/data/local/tmp/.il2cppdump/config.txt`模板（若已有配置则不会覆盖）
+5. 修改配置，例如：
    ```txt
    package_name=com.game.packagename
    enable=1
    ```
-5. 启动游戏，会在`/data/data/<package_name>/files/`目录下生成`dump.cs`
+6. 启动游戏，会在`/data/data/<package_name>/files/`目录下生成`dump.cs`
