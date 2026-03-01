@@ -28,5 +28,5 @@ else
 fi
 
 chown root:root "$CONFIG_FILE" 2>/dev/null
-chmod 0600 "$CONFIG_FILE" 2>/dev/null
+chmod 0644 "$CONFIG_FILE" 2>/dev/null
 chcon u:object_r:system_file:s0 "$CONFIG_FILE" 2>/dev/null
