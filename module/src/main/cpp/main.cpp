@@ -114,15 +114,23 @@ public:
     void preAppSpecialize(AppSpecializeArgs *args) override {
         auto package_name = env->GetStringUTFChars(args->nice_name, nullptr);
         auto app_data_dir = env->GetStringUTFChars(args->app_data_dir, nullptr);
-        preSpecialize(package_name, app_data_dir);
-        env->ReleaseStringUTFChars(args->nice_name, package_name);
-        env->ReleaseStringUTFChars(args->app_data_dir, app_data_dir);
+        current_package_name = package_name == nullptr ? "" : package_name;
+        current_app_data_dir = app_data_dir == nullptr ? "" : app_data_dir;
+        if (package_name != nullptr) {
+            env->ReleaseStringUTFChars(args->nice_name, package_name);
+        }
+        if (app_data_dir != nullptr) {
+            env->ReleaseStringUTFChars(args->app_data_dir, app_data_dir);
+        }
     }
 
     void postAppSpecialize(const AppSpecializeArgs *) override {
+        postSpecialize();
         if (enable_hack) {
             std::thread hack_thread(hack_prepare, game_data_dir, data, length);
             hack_thread.detach();
+        } else {
+            api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
         }
     }
 
@@ -133,26 +141,30 @@ private:
     char *game_data_dir;
     void *data;
     size_t length;
+    std::string current_package_name;
+    std::string current_app_data_dir;
 
-    void preSpecialize(const char *package_name, const char *app_data_dir) {
+    void postSpecialize() {
+        if (current_package_name.empty() || current_app_data_dir.empty()) {
+            return;
+        }
+
         std::string target_package_name;
         bool dump_enabled = false;
         if (!LoadConfig(target_package_name, dump_enabled)) {
-            api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
             return;
         }
 
         if (!dump_enabled) {
             LOGI("dump disabled by config switch");
-            api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
             return;
         }
 
-        if (strcmp(package_name, target_package_name.c_str()) == 0) {
-            LOGI("detect game: %s", package_name);
+        if (current_package_name == target_package_name) {
+            LOGI("detect game: %s", current_package_name.c_str());
             enable_hack = true;
-            game_data_dir = new char[strlen(app_data_dir) + 1];
-            strcpy(game_data_dir, app_data_dir);
+            game_data_dir = new char[current_app_data_dir.length() + 1];
+            strcpy(game_data_dir, current_app_data_dir.c_str());
 
 #if defined(__i386__)
             auto path = "zygisk/armeabi-v7a.so";
@@ -173,8 +185,6 @@ private:
                 LOGW("Unable to open arm file");
             }
 #endif
-        } else {
-            api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
         }
     }
 };
